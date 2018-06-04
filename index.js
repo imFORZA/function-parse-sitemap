@@ -1,38 +1,31 @@
+/**
+ * Responds to any HTTP request that can provide a "message" field in the body.
+ *
+ * @param {!Object} req Cloud Function request context.
+ * @param {!Object} res Cloud Function response context.
+ */
+var whois = require('whois');
 const url = require('url');
-const sitemaps = require('sitemap-stream-parser');
 
-var domains = [];
-
-exports.getAllURLs = function(req, res){
-  // Okay... First, it's assumed that site is defined somehow.
+exports.whoIs = function whoIs(req, res){
   var url;
-  if(req.body.site){
-    url = parseUrl(req.body.site);
-  }else if(req.query && req.query.site){
-    url = parseUrl(req.query.site);
+  if(req.body.domain){
+    url = parseUrl(req.body.domain);
+  }else if(req.query && req.query.domain){
+    url = parseUrl(req.query.domain);
   }else{
-    return res.status( 420 ).send( 'Missing required \'site\' parameter.' );
+    return res.status( 420 ).send( 'Missing required \'domain\' parameter.' );
   }
-
-  // Now that we have url...
-  sitemaps.parseSitemaps(url.protocol + '//' + url.host + '/sitemap.xml', addURL, function(err, sitemaps){
+  
+  whois.lookup(url.host, {
+  	follow: 5
+  },function(err, data) {
     if(err){
-      res.status(500).send('We are unable to process your request right now.');
+      return res.status( 500 ).send( 'Something went wrong on our end.' );
     }else{
-      res.status(200).send({
-        sitemaps: sitemaps,
-        domains: domains
-      });
+      return res.status( 200 ).send( JSON.stringify(data) );
     }
   });
-
-  // res.status( 201 ).send();
-}
-
-function addURL(url){
-  if( ! domains.includes(url) ){
-    domains.push(url);
-  }
 }
 
 function parseUrl(site){
